@@ -1,0 +1,12 @@
+.vscode/
+.idea/
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+*.log
+trivy-reports/
+reports/
+02-seguranca-containers/app.log
+container/
+.env

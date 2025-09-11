@@ -1,11 +1,13 @@
-# 02 - Segurança em Containers
+# DevSecOps Practical Tests - Starter Repository
 
-Objetivo:
-- Criar imagem Docker segura (multi-stage, usuário não-root) e escanear com Trivy.
+Este repositório contém templates e exemplos para os 5 desafios descritos no teste.
+Use isto como ponto de partida — personalize nomes, credenciais e configurações conforme necessário.
 
-Como testar:
-- python -m venv .venv && source .venv/bin/activate
-- pip install -r requirements.txt
-- pytest
-- docker build -t devsecops-app .
-- trivy image --exit-code 1 --severity CRITICAL devsecops-app:latest
+Pastas:
+- 01-ci-cd-pipeline-seguro
+- 02-seguranca-containers
+- 03-iac-com-validacoes
+- 04-simulacao-incidente
+- 05-gestao-segredos
+
+Cada pasta tem um README com instruções rápidas.
