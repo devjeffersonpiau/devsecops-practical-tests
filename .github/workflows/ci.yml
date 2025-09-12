@@ -36,15 +36,42 @@ jobs:
           name: pytest-coverage-xml
           path: 02-seguranca-containers/coverage.xml
 
-  build_and_scan_image:
-    name: Build Docker & Trivy (fail on CRITICAL)
+  # === NOVO STAGE 1: Build da imagem Docker e publicação como artefato ===
+  build_docker_image:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     needs: test
     steps:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t devsecops-app ./02-seguranca-containers
+        run: docker build -t devsecops-app:latest ./02-seguranca-containers
+
+      - name: Save Docker image as artifact
+        run: docker save devsecops-app:latest -o devsecops-app.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: devsecops-app.tar
+
+  # === NOVO STAGE 2: Scan da imagem com Trivy (falha em CRITICAL) ===
+  scan_docker_image:
+    name: Trivy Scan (fail on CRITICAL)
+    runs-on: ubuntu-latest
+    needs: build_docker_image
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: .
+
+      - name: Load Docker image
+        run: docker load -i devsecops-app.tar
 
       - name: Trivy image scan (CRITICAL -> fail) + SARIF
         uses: aquasecurity/trivy-action@0.22.0
@@ -107,14 +134,12 @@ jobs:
     name: SonarQube scan (conditional)
     runs-on: ubuntu-latest
     needs: test
-    # expõe os secrets como env do job
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
       - name: SonarQube Scan
-        # condição usando env.*, que é suportado
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         uses: SonarSource/sonarqube-scan-action@v3
         env:
