@@ -3,7 +3,6 @@ on:
   push:
   pull_request:
 
-# necessário para upload de SARIF (Trivy/DC)
 permissions:
   contents: read
   security-events: write
@@ -36,9 +35,8 @@ jobs:
           name: pytest-coverage-xml
           path: 02-seguranca-containers/coverage.xml
 
-  # === STAGE 1: Build da imagem Docker e push no Docker Hub ===
   build_docker_image:
-    name: Build Docker Image & Push to Docker Hub
+    name: Build Docker Image & (on push) Push to Docker Hub
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -47,21 +45,23 @@ jobs:
       - name: Build Docker image
         run: docker build -t devsecops-app:latest ./02-seguranca-containers
 
-      - name: Login no Docker Hub
+      # Login e push APENAS em 'push' (secrets não existem em PR)
+      - name: Docker Hub login (push only)
+        if: ${{ github.event_name == 'push' }}
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
 
-      - name: Tag da imagem
+      - name: Tag Docker image
+        if: ${{ github.event_name == 'push' }}
         run: |
           docker tag devsecops-app:latest jeffersonpiau/devsecops-app:latest
-          # opcional: também publicar com o SHA do commit para rastreabilidade
           docker tag devsecops-app:latest jeffersonpiau/devsecops-app:${{ github.sha }}
 
-      - name: Push da imagem (latest e SHA)
+      - name: Push Docker image (latest & SHA)
+        if: ${{ github.event_name == 'push' }}
         run: |
           docker push jeffersonpiau/devsecops-app:latest
           docker push jeffersonpiau/devsecops-app:${{ github.sha }}
 
-  # === STAGE 2: Scan da imagem com Trivy (falha em CRITICAL) direto do Docker Hub ===
   scan_docker_image:
     name: Trivy Scan (fail on CRITICAL)
     runs-on: ubuntu-latest
@@ -69,18 +69,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Login opcional (necessário se o repositório no Docker Hub for privado)
-      - name: Docker login (opcional, para imagens privadas)
-        if: ${{ always() }}
-        run: |
-          if [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
-          fi
+      # Em PR: não tem secrets. Em push: faz login pra imagem privada, se necessário.
+      - name: Docker Hub login (only on push)
+        if: ${{ github.event_name == 'push' }}
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
 
       - name: Trivy image scan (CRITICAL -> fail) + SARIF
         uses: aquasecurity/trivy-action@0.22.0
         with:
           scan-type: 'image'
+          # Em PR, ainda dá pra escanear se o repo no Docker Hub for público;
+          # em push, o login acima cobre caso seja privado.
           image-ref: 'jeffersonpiau/devsecops-app:latest'
           severity: 'CRITICAL'
           format: 'sarif'
