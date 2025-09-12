@@ -3,14 +3,14 @@ on:
   push:
   pull_request:
 
-# permissões necessárias para enviar relatórios SARIF
+# necessário para upload de SARIF (Trivy/DC)
 permissions:
   contents: read
   security-events: write
 
 jobs:
   test:
-    name: Unit tests (pytest)
+    name: Unit tests (pytest) + coverage
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,8 +25,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run tests
-        run: pytest -q
+          pip install pytest-cov
+      - name: Run tests + coverage (XML)
+        run: |
+          pytest --cov=./ --cov-report=xml:coverage.xml -q
+      - name: Upload coverage as artifact (opcional)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-coverage-xml
+          path: 02-seguranca-containers/coverage.xml
 
   build_and_scan_image:
     name: Build Docker & Trivy (fail on CRITICAL)
@@ -38,7 +46,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t devsecops-app ./02-seguranca-containers
 
-      - name: Trivy image scan (CRITICAL -> fail)
+      - name: Trivy image scan (CRITICAL -> fail) + SARIF
         uses: aquasecurity/trivy-action@0.22.0
         with:
           scan-type: 'image'
@@ -55,40 +63,35 @@ jobs:
           sarif_file: trivy-results.sarif
 
   dependency_check:
-    name: OWASP Dependency-Check
+    name: OWASP Dependency-Check (docker)
     runs-on: ubuntu-latest
     needs: test
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Dependency-Check database
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dc-db-${{ runner.os }}-v1
-          restore-keys: |
-            dc-db-${{ runner.os }}-
+      - name: Prepare cache dir
+        run: mkdir -p $HOME/dc-data reports
 
       - name: Run Dependency-Check (SARIF)
-        uses: dependency-check/Dependency-Check_Action@v4
         continue-on-error: true
-        with:
-          project: "devsecops-app"
-          path: "02-seguranca-containers"
-          format: "SARIF"
-          out: "reports"
-          args: >
-            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+        run: |
+          docker run --rm \
+            -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
+            -e JAVA_OPTS="-Xmx2g" \
+            -v "$HOME/dc-data":/usr/share/dependency-check/data \
+            -v "$PWD":/src \
+            -v "$PWD/reports":/report \
+            owasp/dependency-check:latest \
+            --scan /src/02-seguranca-containers \
+            --format "SARIF" --out /report --project "devsecops-app" \
             --failOnCVSS 0
-        env:
-          JAVA_OPTS: "-Xmx2g"
+
+      - name: List reports (debug)
+        if: ${{ always() }}
+        run: ls -lah reports || true
 
       - name: Upload Dependency-Check SARIF
-        if: ${{ always() }}
+        if: ${{ always() && hashFiles('reports/dependency-check-report.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: reports/dependency-check-report.sarif
@@ -107,14 +110,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: SonarQube Scan
+        # mover a condição para o STEP (aqui secrets.* é suportado)
+        if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+        uses: SonarSource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
-        uses: SonarSource/sonarqube-scan-action@v3
         with:
           args: >
+            -Dsonar.organization=devjeffersonpiau
             -Dsonar.projectKey=devsecops-practical-tests
             -Dsonar.projectName=devsecops-practical-tests
             -Dsonar.sources=02-seguranca-containers
+            -Dsonar.tests=02-seguranca-containers/tests
+            -Dsonar.test.inclusions=**/tests/**
+            -Dsonar.exclusions=**/tests/**
             -Dsonar.python.version=3.11
+            -Dsonar.python.coverage.reportPaths=02-seguranca-containers/coverage.xml
