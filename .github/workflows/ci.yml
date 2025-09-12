@@ -36,9 +36,9 @@ jobs:
           name: pytest-coverage-xml
           path: 02-seguranca-containers/coverage.xml
 
-  # === NOVO STAGE 1: Build da imagem Docker e publicação como artefato ===
+  # === STAGE 1: Build da imagem Docker e push no Docker Hub ===
   build_docker_image:
-    name: Build Docker Image
+    name: Build Docker Image & Push to Docker Hub
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -47,16 +47,21 @@ jobs:
       - name: Build Docker image
         run: docker build -t devsecops-app:latest ./02-seguranca-containers
 
-      - name: Save Docker image as artifact
-        run: docker save devsecops-app:latest -o devsecops-app.tar
+      - name: Login no Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
 
-      - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: devsecops-app.tar
+      - name: Tag da imagem
+        run: |
+          docker tag devsecops-app:latest jeffersonpiau/devsecops-app:latest
+          # opcional: também publicar com o SHA do commit para rastreabilidade
+          docker tag devsecops-app:latest jeffersonpiau/devsecops-app:${{ github.sha }}
 
-  # === NOVO STAGE 2: Scan da imagem com Trivy (falha em CRITICAL) ===
+      - name: Push da imagem (latest e SHA)
+        run: |
+          docker push jeffersonpiau/devsecops-app:latest
+          docker push jeffersonpiau/devsecops-app:${{ github.sha }}
+
+  # === STAGE 2: Scan da imagem com Trivy (falha em CRITICAL) direto do Docker Hub ===
   scan_docker_image:
     name: Trivy Scan (fail on CRITICAL)
     runs-on: ubuntu-latest
@@ -64,20 +69,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-          path: .
-
-      - name: Load Docker image
-        run: docker load -i devsecops-app.tar
+      # Login opcional (necessário se o repositório no Docker Hub for privado)
+      - name: Docker login (opcional, para imagens privadas)
+        if: ${{ always() }}
+        run: |
+          if [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
+          fi
 
       - name: Trivy image scan (CRITICAL -> fail) + SARIF
         uses: aquasecurity/trivy-action@0.22.0
         with:
           scan-type: 'image'
-          image-ref: 'devsecops-app:latest'
+          image-ref: 'jeffersonpiau/devsecops-app:latest'
           severity: 'CRITICAL'
           format: 'sarif'
           output: 'trivy-results.sarif'
