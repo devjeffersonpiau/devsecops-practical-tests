@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   security-events: write
+  packages: write
 
 jobs:
   test:
@@ -16,18 +17,22 @@ jobs:
         working-directory: 02-seguranca-containers
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
+
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-cov
+
       - name: Run tests + coverage (XML)
         run: |
           pytest --cov=./ --cov-report=xml:coverage.xml -q
+
       - name: Upload coverage as artifact (opcional)
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -35,56 +40,35 @@ jobs:
           name: pytest-coverage-xml
           path: 02-seguranca-containers/coverage.xml
 
-  build_docker_image:
-    name: Build Docker Image & (on push) Push to Docker Hub
+  build_and_scan_image:
+    name: Build Docker & Trivy (fail on CRITICAL)
     runs-on: ubuntu-latest
     needs: test
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Build Docker image (local)
         run: docker build -t devsecops-app:latest ./02-seguranca-containers
 
-      # Login e push APENAS em 'push' (secrets não existem em PR)
-      - name: Docker Hub login (push only)
-        if: ${{ github.event_name == 'push' }}
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
-
-      - name: Tag Docker image
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          docker tag devsecops-app:latest jeffersonpiau/devsecops-app:latest
-          docker tag devsecops-app:latest jeffersonpiau/devsecops-app:${{ github.sha }}
-
-      - name: Push Docker image (latest & SHA)
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          docker push jeffersonpiau/devsecops-app:latest
-          docker push jeffersonpiau/devsecops-app:${{ github.sha }}
-
-  scan_docker_image:
-    name: Trivy Scan (fail on CRITICAL)
-    runs-on: ubuntu-latest
-    needs: build_docker_image
-    steps:
-      - uses: actions/checkout@v4
-
-      # Em PR: não tem secrets. Em push: faz login pra imagem privada, se necessário.
-      - name: Docker Hub login (only on push)
-        if: ${{ github.event_name == 'push' }}
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "jeffersonpiau" --password-stdin
+      # Cache do banco do Trivy para acelerar próximos runs
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-v1
+          restore-keys: |
+            trivy-db-${{ runner.os }}-
 
       - name: Trivy image scan (CRITICAL -> fail) + SARIF
         uses: aquasecurity/trivy-action@0.22.0
         with:
           scan-type: 'image'
-          # Em PR, ainda dá pra escanear se o repo no Docker Hub for público;
-          # em push, o login acima cobre caso seja privado.
-          image-ref: 'jeffersonpiau/devsecops-app:latest'
+          image-ref: 'devsecops-app:latest'
           severity: 'CRITICAL'
           format: 'sarif'
           output: 'trivy-results.sarif'
           exit-code: '1'
+          cache-dir: ~/.cache/trivy
 
       - name: Upload Trivy SARIF
         if: ${{ always() }}
@@ -99,10 +83,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare cache dir
-        run: mkdir -p $HOME/dc-data reports
+      # Diretórios de trabalho (cache e data)
+      - name: Prepare dirs
+        run: |
+          mkdir -p "$HOME/dc-cache" "$HOME/dc-data" reports
 
+      # Cache do DB NVD (evita re-download pesado a cada run)
+      - name: Cache Dependency-Check DB
+        uses: actions/cache@v4
+        with:
+          path: $HOME/dc-cache
+          key: dc-db-${{ runner.os }}-v1
+          restore-keys: |
+            dc-db-${{ runner.os }}-
+
+      # Sincroniza cache -> data para este run e remove locks do H2
+      - name: Warm data dir from cache and remove H2 locks
+        run: |
+          rsync -a "$HOME/dc-cache/" "$HOME/dc-data/" || true
+          rm -f "$HOME/dc-data"/*.lck "$HOME/dc-data"/*.lock "$HOME/dc-data"/*.trace.db || true
+          find "$HOME/dc-data" -name "*.lobs.db" -type f -print -delete || true
+
+      # Executa o scan usando o diretório 'data' isolado deste run
       - name: Run Dependency-Check (SARIF)
+        # mantemos continue-on-error para o teste não ficar vermelho caso a NVD rate-limit
         continue-on-error: true
         run: |
           docker run --rm \
@@ -114,7 +118,16 @@ jobs:
             owasp/dependency-check:latest \
             --scan /src/02-seguranca-containers \
             --format "SARIF" --out /report --project "devsecops-app" \
-            --failOnCVSS 0
+            --failOnCVSS 0 \
+            --cveValidForHours 24
+
+      # Sincroniza de volta data -> cache (salva atualizações do DB) e limpa locks antes do cache persistir
+      - name: Persist updated DB back to cache (and clean locks)
+        if: ${{ always() }}
+        run: |
+          rm -f "$HOME/dc-data"/*.lck "$HOME/dc-data"/*.lock "$HOME/dc-data"/*.trace.db || true
+          find "$HOME/dc-data" -name "*.lobs.db" -type f -print -delete || true
+          rsync -a --delete "$HOME/dc-data/" "$HOME/dc-cache/" || true
 
       - name: List reports (debug)
         if: ${{ always() }}
@@ -142,6 +155,7 @@ jobs:
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
+
       - name: SonarQube Scan
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         uses: SonarSource/sonarqube-scan-action@v3
