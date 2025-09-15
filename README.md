@@ -9,46 +9,35 @@ Estrutura
 Pipeline CI/CD rodando em GitHub Actions, com:
 
 Unit tests com pytest
-.
 
-Análise estática e de segurança com SonarCloud
-.
+Análise estática e segurança com SonarCloud
 
 Escaneamento de dependências com OWASP Dependency-Check
-.
 
-Escaneamento de imagem Docker com Trivy
-, configurado para falhar em vulnerabilidades CRITICAL.
+Escaneamento de imagem Docker com Trivy (falha em vulnerabilidades CRITICAL)
 
 02-seguranca-containers
-Aplicação simples em Python/Flask
- com:
+Aplicação simples em Python/Flask com:
 
-Dockerfile seguro (multi-stage build, usuário não-root, base mínima).
+Dockerfile seguro (multi-stage build, usuário não-root, base mínima)
 
-Testes automatizados com pytest.
+Testes automatizados com pytest
 
-Escaneamento de imagem Docker com Trivy.
+Escaneamento de imagem Docker com Trivy
 
 03-iac-com-validacoes
-Exemplo de IaC (Terraform) com validações de segurança usando Checkov
- e tfsec
-.
+Exemplo de IaC (Terraform) com validações de segurança usando Checkov e tfsec
 
 04-simulacao-incidente
-Simulação de ataque simples (injeção SQL) e script de detecção/monitoramento.
-Cenário integrável com observabilidade (Grafana Loki
-, Prometheus
-).
+Simulação de ataque de injeção SQL e script de detecção/monitoramento.
+Cenário integrável com observabilidade (Grafana Loki, Prometheus)
 
 05-gestao-segredos
 Exemplo de gestão de segredos utilizando HashiCorp Vault
-.
 
 Pipeline CI/CD (GitHub Actions)
 
-O workflow principal está em .github/workflows/ci.yml.
-Ele é executado automaticamente a cada push ou pull request.
+O workflow principal está em .github/workflows/ci.yml e é executado a cada push ou pull request.
 
 Unit tests
 
@@ -62,56 +51,52 @@ Constrói a imagem Docker.
 
 Escaneia com Trivy.
 
-O job falha caso sejam encontradas vulnerabilidades CRITICAL.
+O job falha em vulnerabilidades CRITICAL (comportamento esperado).
 
 OWASP Dependency-Check
 
 Escaneia dependências da aplicação.
 
-Publica relatório em formato SARIF
- no GitHub Security.
+Publica relatório em formato SARIF no GitHub Security.
 
-Relatórios adicionais ficam disponíveis como artifact.
+Relatórios adicionais ficam disponíveis como artifacts.
 
 SonarQube (condicional)
 
-Executa análise estática no SonarCloud
- somente se os secrets SONAR_TOKEN e SONAR_HOST_URL estiverem configurados.
+Executa análise estática no SonarCloud somente se os secrets SONAR_TOKEN e SONAR_HOST_URL estiverem configurados.
 
 Como validar no GitHub Actions
 
 Acesse a aba Actions do repositório:
-https://github.com/devjeffersonpiau/devsecops-practical-tests/actions
+GitHub Actions
 
 Clique no último run do workflow ci-cd-security.
 
 Confira os jobs:
 
-Unit tests (pytest) deve passar.
+Unit tests (pytest) → deve passar
 
-Build + Trivy: falha em vulnerabilidades CRITICAL (comportamento esperado).
+Build + Trivy → falha em vulnerabilidades CRITICAL
 
-OWASP Dependency-Check: gera relatórios e envia para Code scanning alerts.
+OWASP Dependency-Check → gera relatórios e envia para Code scanning alerts
 
-SonarQube: executa apenas se os secrets estiverem configurados.
+SonarQube → executa apenas se os secrets estiverem configurados
 
-Relatórios disponíveis:
+Relatórios:
 
-Artifacts do run (para baixar dependency-check-reports).
+Artifacts: baixe dependency-check-reports no run
 
-Code scanning alerts do repositório:
-https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning
+Code scanning alerts: alertas de segurança
 
-SonarCloud (listagem de projetos; selecione o projeto correspondente):
-https://sonarcloud.io/projects
+SonarCloud: projetos analisados
 
 Secrets utilizados
 
-SONAR_HOST_URL: URL do SonarCloud.
+SONAR_HOST_URL → URL do SonarCloud
 
-SONAR_TOKEN: Token de autenticação do Sonar.
+SONAR_TOKEN → Token de autenticação do Sonar
 
-NVD_API_KEY: Chave para consultas à base da NVD (Dependency-Check).
+NVD_API_KEY → Chave para consultas à base da NVD (Dependency-Check)
 
 Como rodar localmente
 cd 02-seguranca-containers
@@ -138,12 +123,12 @@ curl "http://localhost:8081/search?q=teste"
 
 Diferenciais
 
-Pipeline CI/CD com segurança aplicada desde o início (Shift Left Security).
+Pipeline CI/CD com segurança aplicada desde o início (Shift Left Security)
 
-Escaneamento automatizado em código, dependências e imagens Docker.
+Escaneamento automatizado em código, dependências e imagens Docker
 
-Simulação de incidentes para validar monitoramento.
+Simulação de incidentes para validar monitoramento
 
-Gestão de segredos integrada com Vault.
+Gestão de segredos integrada com Vault
 
-Preparado para observabilidade e dashboards no Grafana/Prometheus.
+Preparado para observabilidade e dashboards no Grafana/Prometheus
