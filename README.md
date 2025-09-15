@@ -1,7 +1,7 @@
 DevSecOps Practical Tests - Starter Repository
 
 Este repositório contém a implementação dos 5 desafios práticos do teste técnico de DevSecOps.
-Cada pasta possui código, Dockerfiles, exemplos de IaC e instruções específicas em seu próprio README.md.
+Cada pasta possui código, Dockerfiles, exemplos de IaC e instruções específicas em meu próprio README.md.
 
 Estrutura
 
