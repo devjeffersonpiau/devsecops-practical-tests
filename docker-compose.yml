@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  app:
+    build: ./02-seguranca-containers
+    container_name: sqli-demo-app
+    ports:
+      - "8080:8080"
+    # Garante que o log exista no host e seja o mesmo arquivo que o Promtail vai ler
+    volumes:
+      - ./02-seguranca-containers/app.log:/app/app.log
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    # Monta SOMENTE o arquivo de log que a app escreve, no mesmo caminho esperado pelo promtail
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - ./02-seguranca-containers/app.log:/var/log/app/app.log:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+      - app
+    restart: unless-stopped

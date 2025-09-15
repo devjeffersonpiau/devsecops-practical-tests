@@ -1,4 +1,4 @@
-#!/home/jeffpiau/devsecops-practical-tests/02-seguranca-containers/.venv/bin/python3.11
+#!/home/jeffpiau/Documents/devsecops-practical-tests/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

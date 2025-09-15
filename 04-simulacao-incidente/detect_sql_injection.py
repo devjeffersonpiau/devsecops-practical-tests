@@ -2,14 +2,17 @@ import re
 import sys
 from pathlib import Path
 
-log_path = Path('../02-seguranca-containers/app.log')
+# Caminho para o log
+log_path = Path("../02-seguranca-containers/app.log")
+
 if not log_path.exists():
-    print('Arquivo de log não encontrado:', log_path)
+    print("Arquivo de log não encontrado:", log_path)
     sys.exit(1)
 
-text = log_path.read_text()
+text = log_path.read_text(encoding="utf-8", errors="ignore")
+
 patterns = [
-    r"('|")\s*or\s*('|")?1('|")?\s*=\s*('|")?1('|")?",
+    r"('|\")\s*or\s*('|\")?1('|\")?\s*=\s*('|\")?1('|\")?",
     r"\bUNION\b|\bSELECT\b|\bDROP\b",
     r"(\%27)|(' OR '1'='1)"
 ]
@@ -20,9 +23,9 @@ for p in patterns:
         alerts.append(p)
 
 if alerts:
-    print('POSSÍVEIS ALERTAS DETECTADOS. Padrões encontrados:')
+    print("🚨 POSSÍVEIS ALERTAS DETECTADOS. Padrões encontrados:")
     for a in alerts:
-        print(' -', a)
+        print(" -", a)
     sys.exit(2)
 else:
-    print('Nenhuma evidência de SQLi detectada nos logs.')
+    print("✅ Nenhuma evidência de SQLi detectada nos logs.")
