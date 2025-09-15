@@ -80,8 +80,8 @@ Executa análise estática no SonarCloud
 
 Como validar no GitHub Actions
 
-Acesse a aba Actions
- do repositório.
+Acesse a aba Actions do repositório:
+https://github.com/devjeffersonpiau/devsecops-practical-tests/actions
 
 Clique no último run do workflow ci-cd-security.
 
@@ -91,19 +91,19 @@ Unit tests (pytest) deve passar.
 
 Build + Trivy: falha em vulnerabilidades CRITICAL (comportamento esperado).
 
-OWASP Dependency-Check: gera relatórios e envia para Code scanning alerts
-.
+OWASP Dependency-Check: gera relatórios e envia para Code scanning alerts.
 
 SonarQube: executa apenas se os secrets estiverem configurados.
 
 Relatórios disponíveis:
 
-Em Artifacts (no run do Actions) → baixar dependency-check-reports.
+Artifacts do run (para baixar dependency-check-reports).
 
-Em Security → Code scanning alerts no GitHub → ver vulnerabilidades reportadas.
+Code scanning alerts do repositório:
+https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning
 
-Em SonarCloud → projeto devsecops-practical-tests
-.
+SonarCloud (listagem de projetos; selecione o projeto correspondente):
+https://sonarcloud.io/projects
 
 Secrets utilizados
 
