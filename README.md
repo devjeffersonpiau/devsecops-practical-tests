@@ -1,89 +1,119 @@
-# DevSecOps Practical Tests - Starter Repository
+DevSecOps Practical Tests
 
-# DevSecOps Practical Tests
+Este repositório contém a implementação dos 5 desafios práticos do teste técnico de DevSecOps.
+Cada pasta possui código, Dockerfiles, exemplos de IaC e instruções específicas em seu próprio README.md.
 
-Este repositório contém a implementação dos **5 desafios práticos** do teste técnico de DevSecOps.  
-Cada pasta tem código, Dockerfiles, exemplos de IaC e instruções específicas em seu próprio `README.md`.
+Estrutura
 
----
+01-ci-cd-pipeline-seguro
+Pipeline CI/CD rodando em GitHub Actions, com:
 
-## 📂 Estrutura
+Unit tests com pytest
+.
 
-- **01-ci-cd-pipeline-seguro**  
-  ➤ Pipeline CI/CD rodando em **GitHub Actions**, com:
-  - Unit tests (pytest)  
-  - Análise estática e segurança: **SonarQube**  
-  - Escaneamento de dependências: **OWASP Dependency-Check**  
-  - Escaneamento de imagem Docker: **Trivy (falha em vulnerabilidades CRITICAL)**  
+Análise estática e de segurança com SonarCloud
+.
 
-- **02-seguranca-containers**  
-  ➤ Aplicação simples em Python/Flask com:
-  - Dockerfile seguro (multi-stage build, usuário não-root, base mínima)  
-  - Testes automatizados com pytest  
-  - Escaneamento de imagem Docker com Trivy  
+Escaneamento de dependências com OWASP Dependency-Check
+.
 
-- **03-iac-com-validacoes**  
-  ➤ Exemplo de IaC (Terraform) com validações de segurança usando Checkov/TFSec.  
+Escaneamento de imagem Docker com Trivy
+, configurado para falhar em vulnerabilidades CRITICAL.
 
-- **04-simulacao-incidente**  
-  ➤ Simulação de ataque simples (injeção SQL) + script de detecção e monitoramento.  
+02-seguranca-containers
+Aplicação simples em Python/Flask
+ com:
 
-- **05-gestao-segredos**  
-  ➤ Exemplo de gestão de segredos usando HashiCorp Vault (docker-compose).  
+Dockerfile seguro (multi-stage build, usuário não-root, base mínima).
 
----
+Testes automatizados com pytest.
 
-## 🚀 CI/CD Pipeline (GitHub Actions)
+Escaneamento de imagem Docker com Trivy.
 
-O workflow principal está em [`.github/workflows/ci.yml`](.github/workflows/ci.yml).  
-Ele executa automaticamente em **cada push ou pull request**:
+03-iac-com-validacoes
+Exemplo de IaC (Terraform) com validações de segurança usando Checkov
+ e tfsec
+.
 
-1. **Unit tests**  
-   - Executa pytest no desafio 02.  
-   - Verifica se a aplicação está funcional.  
+04-simulacao-incidente
+Simulação de ataque simples (injeção SQL) e script de detecção/monitoramento.
+Cenário integrável com observabilidade (Grafana Loki
+, Prometheus
+).
 
-2. **Build + Trivy**  
-   - Constrói a imagem Docker.  
-   - Escaneia com **Trivy**.  
-   - O job **falha** caso haja vulnerabilidades **CRITICAL**.  
+05-gestao-segredos
+Exemplo de gestão de segredos utilizando HashiCorp Vault
+.
 
-3. **OWASP Dependency-Check**  
-   - Escaneia dependências da aplicação.  
-   - Publica relatório em SARIF no GitHub Security.  
-   - Relatórios também ficam disponíveis como artifact para download.  
+Pipeline CI/CD (GitHub Actions)
 
-4. **SonarQube (condicional)**  
-   - Executa análise estática no SonarQube apenas se os secrets `SONAR_TOKEN` e `SONAR_HOST_URL` estiverem configurados.  
+O workflow principal está em .github/workflows/ci.yml.
+Ele é executado automaticamente a cada push ou pull request.
 
----
+Unit tests
 
-## 📊 Como validar no GitHub Actions (gestor)
+Executa pytest no desafio 02.
 
-1. Vá até a aba **Actions** deste repositório.  
-2. Clique no último run de `ci-cd-security`.  
-3. Confira os jobs:
-   - ✅ **Unit tests (pytest)** deve passar.  
-   - ✅ **Build Docker & Trivy**: se houver CRITICAL, o job falha → comportamento esperado.  
-   - ✅ **OWASP Dependency-Check**: gera relatórios e envia para *Code scanning alerts*.  
-   - ✅ **SonarQube**: roda apenas se secrets estiverem configurados.  
+Valida se a aplicação está funcional.
 
-4. Relatórios:  
-   - Vá em **Artifacts** (no run) → baixe `dependency-check-reports`.  
-   - Vá em **Security → Code scanning alerts** para ver vulnerabilidades reportadas.  
+Build + Trivy
 
----
+Constrói a imagem Docker.
 
-## 🔑 Secrets utilizados
+Escaneia com Trivy.
 
-- `SONAR_HOST_URL` → URL do SonarQube/SonarCloud  
-- `SONAR_TOKEN` → Token de autenticação Sonar  
-- `NVD_API_KEY` → Chave para consultas à base da NVD (Dependency-Check)  
+O job falha caso sejam encontradas vulnerabilidades CRITICAL.
 
----
+OWASP Dependency-Check
 
-## ✅ Como rodar localmente
+Escaneia dependências da aplicação.
 
-```bash
+Publica relatório em formato SARIF
+ no GitHub Security.
+
+Relatórios adicionais ficam disponíveis como artifact.
+
+SonarQube (condicional)
+
+Executa análise estática no SonarCloud
+ somente se os secrets SONAR_TOKEN e SONAR_HOST_URL estiverem configurados.
+
+Como validar no GitHub Actions
+
+Acesse a aba Actions
+ do repositório.
+
+Clique no último run do workflow ci-cd-security.
+
+Confira os jobs:
+
+Unit tests (pytest) deve passar.
+
+Build + Trivy: falha em vulnerabilidades CRITICAL (comportamento esperado).
+
+OWASP Dependency-Check: gera relatórios e envia para Code scanning alerts
+.
+
+SonarQube: executa apenas se os secrets estiverem configurados.
+
+Relatórios disponíveis:
+
+Em Artifacts (no run do Actions) → baixar dependency-check-reports.
+
+Em Security → Code scanning alerts no GitHub → ver vulnerabilidades reportadas.
+
+Em SonarCloud → projeto devsecops-practical-tests
+.
+
+Secrets utilizados
+
+SONAR_HOST_URL: URL do SonarCloud.
+
+SONAR_TOKEN: Token de autenticação do Sonar.
+
+NVD_API_KEY: Chave para consultas à base da NVD (Dependency-Check).
+
+Como rodar localmente
 cd 02-seguranca-containers
 
 # ativar virtualenv
@@ -105,3 +135,15 @@ docker run --rm -p 8081:8080 devsecops-app
 # testar endpoints
 curl http://localhost:8081/
 curl "http://localhost:8081/search?q=teste"
+
+Diferenciais
+
+Pipeline CI/CD com segurança aplicada desde o início (Shift Left Security).
+
+Escaneamento automatizado em código, dependências e imagens Docker.
+
+Simulação de incidentes para validar monitoramento.
+
+Gestão de segredos integrada com Vault.
+
+Preparado para observabilidade e dashboards no Grafana/Prometheus.
