@@ -25,7 +25,10 @@ Exemplo de IaC (Terraform) com validações de segurança usando [Checkov](https
 
 **04-simulacao-incidente**  
 Simulação de ataque simples (injeção SQL) e script de detecção/monitoramento.  
-Cenário integrável com observabilidade ([Grafana Loki](https://grafana.com/oss/loki/), [Prometheus](https://prometheus.io/), [Grafana](https://devjeffersonpiau.grafana.net/a/grafana-setupguide-app/getting-started)).  
+Cenário integrável com observabilidade:  
+- [Grafana Loki](https://grafana.com/oss/loki/)  
+- [Prometheus](https://prometheus.io/)  
+- [Grafana Dashboard](https://devjeffersonpiau.grafana.net/a/grafana-setupguide-app/getting-started)  
 
 **05-gestao-segredos**  
 Exemplo de gestão de segredos utilizando [HashiCorp Vault](https://www.vaultproject.io/).  
@@ -62,16 +65,16 @@ Ele é executado automaticamente a cada **push** ou **pull request**.
 1. Acesse a aba [**Actions**](https://github.com/devjeffersonpiau/devsecops-practical-tests/actions) do repositório.  
 2. Clique no último run do workflow **ci-cd-security**.  
 3. Confira os jobs:
-   - Unit tests (pytest) deve **passar**.  
-   - Build + Trivy: falha em vulnerabilidades **CRITICAL** (comportamento esperado).  
-   - OWASP Dependency-Check: gera relatórios e envia para [Code scanning alerts](https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning).  
-   - SonarQube: executa apenas se os secrets estiverem configurados.  
+   - **Unit tests (pytest)** deve passar.  
+   - **Build + Trivy**: falha em vulnerabilidades **CRITICAL** (comportamento esperado).  
+   - **OWASP Dependency-Check**: gera relatórios e envia para [Code scanning alerts](https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning).  
+   - **SonarQube**: executa apenas se os secrets estiverem configurados.  
 
 **Relatórios disponíveis**:  
-- [Artifacts](https://github.com/devjeffersonpiau/devsecops-practical-tests/actions) do run (para baixar `dependency-check-reports`).  
-- [Code scanning alerts](https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning).  
-- [SonarCloud](https://sonarcloud.io/projects) (secrets configurados).  
-- [Grafana](https://devjeffersonpiau.grafana.net/a/grafana-setupguide-app/getting-started) para observabilidade.  
+- [Artifacts](https://github.com/devjeffersonpiau/devsecops-practical-tests/actions) do run (para baixar `dependency-check-reports`)  
+- [Code scanning alerts](https://github.com/devjeffersonpiau/devsecops-practical-tests/security/code-scanning)  
+- [SonarCloud](https://sonarcloud.io/projects) (secrets configurados)  
+- [Grafana Dashboard](https://devjeffersonpiau.grafana.net/a/grafana-setupguide-app/getting-started)  
 
 ---
 
@@ -107,3 +110,4 @@ docker run --rm -p 8081:8080 devsecops-app
 # testar endpoints
 curl http://localhost:8081/
 curl "http://localhost:8081/search?q=teste"
+
